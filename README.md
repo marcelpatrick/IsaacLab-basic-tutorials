@@ -29,7 +29,7 @@ app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 ```
 
-## 2- ```spawn_prims.py``: Defines prims config files and spawns then in the scene based on the attributes set in these files
+## 2- ```spawn_prims.py```: Defines prims config files and spawns then in the scene based on the attributes set in these files
 
 ```
 def design_scene():
