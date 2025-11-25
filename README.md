@@ -24,7 +24,7 @@
 - Applauncher is a wrapper function that makes it easier to launch the simulation and handle configs with command line args
 - Argparser Prepares the code to receive arguments from users typing commands in a CLI such as ``app.py --headless`` and which arguments it accepts.
 
-```
+```python
 # create argparser
 parser = argparse.ArgumentParser(description="Tutorial on creating an empty stage.")
 # append AppLauncher cli args
@@ -38,7 +38,7 @@ simulation_app = app_launcher.app
 
 ### 2- ```spawn_prims.py```: Defines prims config files and spawns them in the scene based on the attributes set in these files
 
-```
+```python
 def design_scene():
     """Designs the scene by spawning ground plane, light, objects and meshes from usd files."""
     # Ground-plane
@@ -114,7 +114,7 @@ def design_scene():
 - Has to be run before any imports
 
 ### 0. Imports
-```
+```python
 import torch
 
 import isaacsim.core.utils.prims as prim_utils
@@ -127,7 +127,7 @@ from isaaclab.sim import SimulationContext
 - Have to run **after** AppLauncher and Argparser
 
 ### 1. design_scene(): Spawns primitives (objects) in the scene
-```
+```python
 def design_scene():
     """Designs the scene."""
     # Ground-plane
@@ -144,7 +144,7 @@ def design_scene():
 - **func()**
 - Func() are like spawn functions that actually spawn the objects in the scene based on their config files. They take the location of the object files to be created and its configuration (saved inside the cfg object itself)
 
-```
+```python
     cfg = sim_utils.GroundPlaneCfg()
     cfg.func("/World/defaultGroundPlane", cfg)
     # Lights
@@ -155,7 +155,7 @@ def design_scene():
 - Define where objects get spawned
 - And each of these locations will be a separate simulation environment, simulating one different entity during RL
   
-```
+```python
     # Create separate groups called "Origin1", "Origin2", "Origin3"
     # Each group will have a robot in it
     origins = [[0.25, 0.25, 0.0], [-0.25, 0.25, 0.0], [0.25, -0.25, 0.0], [-0.25, -0.25, 0.0]]
@@ -166,7 +166,7 @@ def design_scene():
 - This approach instantiates a config object while passing specific config params inside it using the ``RigidObjectCfg`` class
 - that's why it doesn't use the ``cfg = sim_utils.RigidObjectCfg()`` ``cfg.func("/World/RigidObject", cfg)`` approach
   
-```
+```python
     # Rigid Object
     cone_cfg = RigidObjectCfg(
         prim_path="/World/Origin.*/Cone",
@@ -188,11 +188,11 @@ def design_scene():
     return scene_entities, origins
 ```
 
-### 2. run_simulator(): 
+### 2. run_simulator(): Controls the simulation
 - keeps the simulation in a loop (steps), interacts with prims in the scene, resets object states, updates internal buffers to update new object states etc.
 - Specifies the location of the objects according to the global coordinates of the environment.
 
-```
+```python
 def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, RigidObject], origins: torch.Tensor):
     """Runs the simulation loop."""
     # Extract scene entities
@@ -239,12 +239,12 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, RigidObj
 ```
 
 ### 3. Main
-- calls design_scene() and fethers scene_entities, scene_origins
+- calls design_scene() and fetches scene_entities, scene_origins
 - sim.reset(): resets the simulation for it to be ready to play before running the simulator. Re-initializes the entire environment to a clean starting state, allowing the next training episode to begin.
 - calls run_simulator() taking scene_entities, scene_origins retrieved from design_scene()
 
 
-```
+```python
 def main():
     """Main function."""
     # Load kit helper
