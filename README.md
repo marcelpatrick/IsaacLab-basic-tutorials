@@ -12,17 +12,36 @@
 - On the folder structure on the left, navigate to the isaaclab project or tutorial you want to run
 - click the "run python file" button on VS code.
 
+# Standard Functions
+- Standard functions that appear in most IsaacLab code scripts
 
-# Understanding the Code: 
-- More information is passed in the commented lines inside code snippets. 
+## 0. Argparse
+- Defines which command-line inputs the device can receive to support customized ways to run the simulation. eg ``--headless``, ``--device cpu, --device gpu``
+- Has to be run before any imports
+  
+## 0. AppLauncher()
+- Launches the simulation handling command line args
 
-## tutorials\00_sim: project folder
+## 1. Design_scene()
+- Spawns primitives (objects) in the scene using func() and ObjectCfg
+#### 1.1. func(): 
+- spawn the objects in the scene based on their config files
+#### 1.2. ObjectCfg: RigidObjectCfg(), DeformableObjectCfg()...
+- Assets' config files with their standard configurations.
 
-### 1- ```create_empty.py```: 
+## 2. run_simulator()
+- A specific service in the code that runs and controls the simulation
+
+## 3. main()
+- Triggers the whole program defined by the Python script, owns the overall program flow. 
+- calls design_scene() and run_simulator()
+
+  
+# tutorials\00_sim: create_empty.py
+
+## 0. Argparse and AppLauncher
 - Defines the Argparser and launches the app with AppLauncher function
-- Argparser Defines which extra arguments can be used to customize how to launch the simulation
-- Applauncher is a wrapper function that makes it easier to launch the simulation and handle configs with command line args
-- Argparser Prepares the code to receive arguments from users typing commands in a CLI such as ``app.py --headless`` and which arguments it accepts.
+- Standard setup sequence for every Isaac Lab script. Initializes the simulation environment.
 
 ```python
 # create argparser
@@ -36,7 +55,11 @@ app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 ```
 
-### 2- ```spawn_prims.py```: Defines prims config files and spawns them in the scene based on the attributes set in these files
+# tutorials\00_sim: spawn_prims.py
+- Defines prims config files and spawns them in the scene based on the attributes set in these files
+
+## 1. Design_scene(): 
+- Spawns primitives (objects) in the scene
 
 ```python
 def design_scene():
@@ -105,15 +128,30 @@ def design_scene():
     cfg.func("/World/Objects/Table", cfg, translation=(0.0, 0.0, 1.05))
 ```
 
-## tutorials\01_assets: project folder
+# tutorials\01_assets: run_rigid_object.py
 
-### 0. AppLauncher and Argparser
-- Standard setup sequence for every Isaac Lab script. Initializes the simulation environment.
-- AppLauncher: Launches the simulation
-- Argparser: Define which command-line inputs the device can receive to support customized ways to run the simmulation. eg ``--headless``, ``--device cpu, --device gpu``
-- Has to be run before any imports
+## 0. AppLauncher and Argparser
 
-### 0. Imports
+```
+"""Launch Isaac Sim Simulator first."""
+
+import argparse
+
+from isaaclab.app import AppLauncher
+
+# add argparse arguments
+parser = argparse.ArgumentParser(description="Tutorial on spawning and interacting with a rigid object.")
+# append AppLauncher cli args
+AppLauncher.add_app_launcher_args(parser)
+# parse the arguments
+args_cli = parser.parse_args()
+
+# launch omniverse app
+app_launcher = AppLauncher(args_cli)
+simulation_app = app_launcher.app
+```
+
+## 0. Imports
 ```python
 import torch
 
@@ -126,14 +164,15 @@ from isaaclab.sim import SimulationContext
 ```
 - Have to run **after** AppLauncher and Argparser
 
-### 1. design_scene(): Spawns primitives (objects) in the scene
+## 1. design_scene(): Spawns primitives (objects) in the scene
 ```python
 def design_scene():
     """Designs the scene."""
     # Ground-plane
 ```
-#### 1.2. Configuring and Spawning Primitives: Config objects and the func() function 
-- **cfg**
+### 1.2. Configuring and Spawning Primitives: Config objects and the func() function 
+
+- **cfg = sim_utils.GroundPlaneCfg()**
     - IsaacLab uses a **configuration-driven interface**: each prim is spawned using its configuration object which defines its properties, and relationships.
     - These config files are like blueprints or recipes
     - Easy Modification: Since the behavior is defined by data (the settings in the Cfg objects) and not hardcoded logic, you can easily change the entire experiment (e.g., swapping a wheeled robot for a legged robot) just by changing which configuration object you use. This makes the framework modular and efficient for creating and modifying environments.
@@ -162,7 +201,7 @@ def design_scene():
     for i, origin in enumerate(origins):
         prim_utils.create_prim(f"/World/Origin{i}", "Xform", translation=origin)
 ```
-#### 1.3. Defining assets with custom config: RigidObjectCfg()
+### 1.3. Defining assets with custom config: RigidObjectCfg()
 - This approach instantiates a config object while passing specific config params inside it using the ``RigidObjectCfg`` class
 - that's why it doesn't use the ``cfg = sim_utils.RigidObjectCfg()`` ``cfg.func("/World/RigidObject", cfg)`` approach
   
@@ -188,7 +227,7 @@ def design_scene():
     return scene_entities, origins
 ```
 
-### 2. run_simulator(): Controls the simulation
+## 2. run_simulator(): 
 - keeps the simulation in a loop (steps), interacts with prims in the scene, resets object states, updates internal buffers to update new object states etc.
 - Specifies the location of the objects according to the global coordinates of the environment.
 
@@ -238,11 +277,10 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, RigidObj
             print(f"Root position (in world): {cone_object.data.root_pos_w}")
 ```
 
-### 3. Main
+## 3. Main
 - calls design_scene() and fetches scene_entities, scene_origins
 - sim.reset(): resets the simulation for it to be ready to play before running the simulator. Re-initializes the entire environment to a clean starting state, allowing the next training episode to begin.
 - calls run_simulator() taking scene_entities, scene_origins retrieved from design_scene()
-
 
 ```python
 def main():
