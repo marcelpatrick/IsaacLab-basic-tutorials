@@ -17,7 +17,6 @@
 
 ## 0. Argparse
 - Defines which command-line inputs the device can receive to support customized ways to run the simulation. eg ``--headless``, ``--device cpu, --device gpu``
-- Has to be run before any imports
   
 ## 0. AppLauncher()
 - Launches the simulation handling command line args
@@ -131,7 +130,8 @@ def design_scene():
 # tutorials\01_assets: run_rigid_object.py
 
 ## 0. AppLauncher and Argparser
-
+- Has to be run before any imports
+  
 ```
 """Launch Isaac Sim Simulator first."""
 
