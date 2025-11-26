@@ -323,7 +323,7 @@ if __name__ == "__main__":
 ## 1. Design_scene()
 - In this specific design_scene() function, cfg takes configurations from the deformable objects class: DeformableObjectCfg()
 
-```
+```python
 def design_scene():
     """Designs the scene."""
     # Ground-plane
@@ -370,7 +370,7 @@ def design_scene():
 ### 2.3: Update State
 - Saves the new state to the simulation buffer
 
-```
+```python
 def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, DeformableObject], origins: torch.Tensor):
     """Runs the simulation loop."""
     # Extract scene entities
