@@ -151,7 +151,7 @@ app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 ```
 
-## 0. Imports
+## 0. Import Libraries
 ```python
 import torch
 
@@ -361,10 +361,15 @@ def design_scene():
 ## 2. Run_simulation()
 - Has 3 main moments:
 
-### 2.1: Set Initial State
+### 2.1: Fetch Initial State
 - Defines the initial state (pose: position + rotation) of each object
   
 ### 2.2: Change State
+- Adjusts state and position, placing every robot inside its own separate parallel environment
+- Offset state by the origins to align with the simulation world frame
+- Because IsaacLab runs multiple robot simulations in parallel in the same world (each inside its own enviroment), we need to tell it not to spawn all robots at the root location of the world but at the root location of each of the environments.
+- That position is defined relative to the robot’s own local frame, not relative to the environment’s world-frame origin.
+- Without it, all cloned robots would be spawned at the same world coordinates—typically all stacked at (0,0,0.5).
 - Applies changes to each pose
 
 ### 2.3: Update State
@@ -445,9 +450,176 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Deformab
             print(f"Root position (in world): {cube_object.data.root_pos_w[:, :3]}")
 ```
 
+# tutorials\01_assets: run_articulation.py
 
 
+## 0. Argparser and AppLauncher()
 
+```
+"""Launch Isaac Sim Simulator first."""
+
+
+import argparse
+
+from isaaclab.app import AppLauncher
+
+# add argparse arguments
+parser = argparse.ArgumentParser(description="Tutorial on spawning and interacting with an articulation.")
+# append AppLauncher cli args
+AppLauncher.add_app_launcher_args(parser)
+# parse the arguments
+args_cli = parser.parse_args()
+
+# launch omniverse app
+app_launcher = AppLauncher(args_cli)
+simulation_app = app_launcher.app
+```
+
+## 0. Import Libraries
+
+```
+import torch
+
+import isaacsim.core.utils.prims as prim_utils
+
+import isaaclab.sim as sim_utils
+from isaaclab.assets import Articulation
+from isaaclab.sim import SimulationContext
+
+##
+# Pre-defined configs
+##
+from isaaclab_assets import CARTPOLE_CFG  # isort:skip
+```
+
+## 1. Design_scene()
+
+- The approach here uses ``CARTPOLE_cfg.copy()`` to fetche configs from external sources. It Loads a predefined ArticulationCfg describing the robot (links, joints, joint limits, DOFs, drive model, etc.) that already has the robot USD, actuators, joint properties, etc. These come from 2 places:
+  - USD files inside Nvidia Nuvcleus public cloud with structure and visuals for assets. Not stored locally because they are heavy.
+  - ``isaaclab_assets`` or ``CARTPOLE_cfg.copy()`` in this specific case (local config file downloaded as part of the isaaclab project). Stores simulation behavior + Isaac Lab metadata.
+
+```
+def design_scene() -> tuple[dict, list[list[float]]]:
+    """Designs the scene."""
+    # Ground-plane
+    cfg = sim_utils.GroundPlaneCfg()
+    cfg.func("/World/defaultGroundPlane", cfg)
+    # Lights
+    cfg = sim_utils.DomeLightCfg(intensity=3000.0, color=(0.75, 0.75, 0.75))
+    cfg.func("/World/Light", cfg)
+
+    # Create separate groups called "Origin1", "Origin2"
+    # Each group will have a robot in it
+    origins = [[0.0, 0.0, 0.0], [-1.0, 0.0, 0.0]]
+    # Origin 1
+    prim_utils.create_prim("/World/Origin1", "Xform", translation=origins[0])
+    # Origin 2
+    prim_utils.create_prim("/World/Origin2", "Xform", translation=origins[1])
+
+    # Articulation
+    # Fetches pre-populated configs from isaaclab_assets (local), which also calls the public Nvidia Nucleus server to fetch extra configs.
+    cartpole_cfg = CARTPOLE_CFG.copy()
+    # “For each environment origin (Origin0, Origin1, ...), automatically attach/spawn this robot under a prim path matching this regex eg. /Origin0, /Origin1 etc”
+  # Override only the scenario-specific bits: here, just prim_path.
+    cartpole_cfg.prim_path = "/World/Origin.*/Robot"
+    # Creates an Articulation View, using that config.
+    cartpole = Articulation(cfg=cartpole_cfg)
+
+    # return the scene information
+    scene_entities = {"cartpole": cartpole}
+    return scene_entities, origins
+```
+
+## 2. run_simulator()
+
+```
+def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articulation], origins: torch.Tensor):
+    """Runs the simulation loop."""
+    # Extract scene entities
+    # note: we only do this here for readability. In general, it is better to access the entities directly from
+    #   the dictionary. This dictionary is replaced by the InteractiveScene class in the next tutorial.
+    robot = entities["cartpole"]
+    # Define simulation stepping
+    sim_dt = sim.get_physics_dt()
+    count = 0
+```
+### 2.1: Fetch Initial State
+``root_state = robot.data.default_root_state.clone()``
+  
+### 2.2: Change State
+``root_state[:, :3] += origins``
+
+### 2.3: Update State
+``robot.write_root_pose_to_sim(root_state[:, :7])``
+``robot.write_root_velocity_to_sim(root_state[:, 7:])``
+
+```
+    # Simulation loop
+    while simulation_app.is_running():
+        # Reset
+        if count % 500 == 0:
+            # reset counter
+            count = 0
+            # reset the scene entities
+            # root state
+            # we offset the root state by the origin since the states are written in simulation world frame
+            # if this is not done, then the robots will be spawned at the (0, 0, 0) of the simulation world
+            root_state = robot.data.default_root_state.clone()
+            root_state[:, :3] += origins
+            robot.write_root_pose_to_sim(root_state[:, :7])
+            robot.write_root_velocity_to_sim(root_state[:, 7:])
+            # set joint positions with some noise
+            joint_pos, joint_vel = robot.data.default_joint_pos.clone(), robot.data.default_joint_vel.clone()
+            joint_pos += torch.rand_like(joint_pos) * 0.1
+            robot.write_joint_state_to_sim(joint_pos, joint_vel)
+            # clear internal buffers
+            robot.reset()
+            print("[INFO]: Resetting robot state...")
+```
+
+```
+        # Apply random action
+        # -- generate random joint efforts
+        efforts = torch.randn_like(robot.data.joint_pos) * 5.0
+        # -- apply action to the robot
+        robot.set_joint_effort_target(efforts)
+        # -- write data to sim
+        robot.write_data_to_sim()
+        # Perform step
+        sim.step()
+        # Increment counter
+        count += 1
+        # Update buffers
+        robot.update(sim_dt)
+```
+
+## 3. main(): Starts the simulation 
+
+```
+def main():
+    """Main function."""
+    # Load kit helper
+    sim_cfg = sim_utils.SimulationCfg(device=args_cli.device)
+    sim = SimulationContext(sim_cfg)
+    # Set main camera
+    sim.set_camera_view([2.5, 0.0, 4.0], [0.0, 0.0, 2.0])
+    # Design scene
+    scene_entities, scene_origins = design_scene()
+    scene_origins = torch.tensor(scene_origins, device=sim.device)
+    # Play the simulator
+    sim.reset()
+    # Now we are ready!
+    print("[INFO]: Setup complete...")
+    # Run the simulator
+    run_simulator(sim, scene_entities, scene_origins)
+
+
+if __name__ == "__main__":
+    # run the main function
+    main()
+    # close sim app
+    simulation_app.close()
+```
 
 
 
