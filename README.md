@@ -455,7 +455,7 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Deformab
 
 ## 0. Argparser and AppLauncher()
 
-```
+```python
 """Launch Isaac Sim Simulator first."""
 
 
@@ -477,7 +477,7 @@ simulation_app = app_launcher.app
 
 ## 0. Import Libraries
 
-```
+```python
 import torch
 
 import isaacsim.core.utils.prims as prim_utils
@@ -498,7 +498,7 @@ from isaaclab_assets import CARTPOLE_CFG  # isort:skip
   - USD files inside Nvidia Nuvcleus public cloud with structure and visuals for assets. Not stored locally because they are heavy.
   - ``isaaclab_assets`` or ``CARTPOLE_cfg.copy()`` in this specific case (local config file downloaded as part of the isaaclab project). Stores simulation behavior + Isaac Lab metadata.
 
-```
+```python
 def design_scene() -> tuple[dict, list[list[float]]]:
     """Designs the scene."""
     # Ground-plane
@@ -532,7 +532,7 @@ def design_scene() -> tuple[dict, list[list[float]]]:
 
 ## 2. run_simulator()
 
-```
+```python
 def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articulation], origins: torch.Tensor):
     """Runs the simulation loop."""
     # Extract scene entities
@@ -544,16 +544,25 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articula
     count = 0
 ```
 ### 2.1: Fetch Initial State
-``root_state = robot.data.default_root_state.clone()``
+```python
+root_state = robot.data.default_root_state.clone()
+```
   
 ### 2.2: Change State
-``root_state[:, :3] += origins``
+```python
+root_state[:, :3] += origins
+```
 
 ### 2.3: Update State
-``robot.write_root_pose_to_sim(root_state[:, :7])``
-``robot.write_root_velocity_to_sim(root_state[:, 7:])``
-
+```python
+robot.write_root_pose_to_sim(root_state[:, :7])
 ```
+
+```python
+robot.write_root_velocity_to_sim(root_state[:, 7:])
+```
+
+```python
     # Simulation loop
     while simulation_app.is_running():
         # Reset
@@ -577,7 +586,7 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articula
             print("[INFO]: Resetting robot state...")
 ```
 
-```
+```python
         # Apply random action
         # -- generate random joint efforts
         efforts = torch.randn_like(robot.data.joint_pos) * 5.0
@@ -595,7 +604,7 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articula
 
 ## 3. main(): Starts the simulation 
 
-```
+```python
 def main():
     """Main function."""
     # Load kit helper
