@@ -517,14 +517,14 @@ def design_scene() -> tuple[dict, list[list[float]]]:
     prim_utils.create_prim("/World/Origin2", "Xform", translation=origins[1])
 ```
 
-### 1.2: Download Configs
-  - The approach here uses ``CARTPOLE_cfg.copy()`` to fetch pre-defined configs from external sources. It loads a predefined ArticulationCfg describing the robot (links, joints, joint limits, DOFs, drive model, etc.) that already has the robot USD, actuators, joint properties, etc. These come from 2 places:
-    - USD files inside Nvidia Nucleus public cloud with structure and visuals for assets. Not stored locally because they are heavy.
-    - Local config file downloaded as part of the isaaclab project such as ``isaaclab_assets``, or ``CARTPOLE_cfg.copy()`` in this specific case. Stores simulation behavior + Isaac Lab metadata.
+### 1.2: Copy Configs
+  - The approach here uses ``CARTPOLE_cfg.copy()`` to copy pre-defined configs (CARTPOLE_CFG) from external sources. It loads a predefined ArticulationCfg describing the robot control behavior (links, joints, joint limits, DOFs, drive model, etc.) and points to the robot's class USD path (body). These come from 2 places:
+    - USD files live inside Nvidia Nucleus public cloud with structure and visuals for assets. Not stored locally because they are heavy.
+    - Local config file downloaded as part of the isaaclab project such as ``isaaclab_assets``, or ``CARTPOLE_cfg.copy()`` in this specific case. Stores simulation behavior, robot's control behaviour and Isaac Lab metadata.
     
 ```python
     # Articulation
-    # Fetches pre-populated configs from isaaclab_assets (local), which also calls the public Nvidia Nucleus server to fetch extra configs.
+    # Fetches pre-populated configs from isaaclab_assets (local) and copies them.
     cartpole_cfg = CARTPOLE_CFG.copy()
 ```
 ### 1.3: Search for Prim Instances
@@ -535,7 +535,12 @@ def design_scene() -> tuple[dict, list[list[float]]]:
     cartpole_cfg.prim_path = "/World/Origin.*/Robot"
 ```
 ### 1.4: Attribute Config to each Instance
-- So at run time, Isaac creates one folder and file for each instance, fetches each, and attributes to them control attributes defined in the downloaded config files.
+- So at run time, Isaac:
+  -  creates one folder and file for each instance,
+  -  fetches each instance by its path,
+  -  Loads the USD file from the given path in the config file
+  -  Spawns robot instances into the stage under ``/World/OriginX/Robot``
+  -  Applies to them actuator/control settings defined in the copied config files.
 - Each robot instance already comes with a template USD file in the project tree. But this file only contains basic physical attributes (body, geometry, links, joints, mass etc), not control attributes (actuator type, control mode (PD, velocity, torque), joint grouping, drive parameters etc). These control attributes come from the downloaded config files. 
 ```python
     # To each found robot 
