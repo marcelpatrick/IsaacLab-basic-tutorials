@@ -504,7 +504,7 @@ def design_scene() -> tuple[dict, list[list[float]]]:
     cfg = sim_utils.DomeLightCfg(intensity=3000.0, color=(0.75, 0.75, 0.75))
     cfg.func("/World/Light", cfg)
 ```
-## 1.1: Create Instance Folders
+### 1.1: Create Instance Folders
 - At run time, Isaac creates one folder and file for each instance (and env)
   
 ```python
@@ -517,7 +517,7 @@ def design_scene() -> tuple[dict, list[list[float]]]:
     prim_utils.create_prim("/World/Origin2", "Xform", translation=origins[1])
 ```
 
-- ## 1.2: Download Configs
+### 1.2: Download Configs
   - The approach here uses ``CARTPOLE_cfg.copy()`` to fetch pre-defined configs from external sources. It loads a predefined ArticulationCfg describing the robot (links, joints, joint limits, DOFs, drive model, etc.) that already has the robot USD, actuators, joint properties, etc. These come from 2 places:
     - USD files inside Nvidia Nucleus public cloud with structure and visuals for assets. Not stored locally because they are heavy.
     - Local config file downloaded as part of the isaaclab project such as ``isaaclab_assets``, or ``CARTPOLE_cfg.copy()`` in this specific case. Stores simulation behavior + Isaac Lab metadata.
@@ -527,21 +527,21 @@ def design_scene() -> tuple[dict, list[list[float]]]:
     # Fetches pre-populated configs from isaaclab_assets (local), which also calls the public Nvidia Nucleus server to fetch extra configs.
     cartpole_cfg = CARTPOLE_CFG.copy()
 ```
-## 1.3: Search for Prim Instances
+### 1.3: Search for Prim Instances
   - Then it searches for each robot instance in the world by their file paths (created above by `` prim_utils.create_prim("/World/Origin1", "Xform", translation=origins[0])``), using the regex ``cartpole_cfg.prim_path = "/World/Origin.*/Robot"``
     
 ```python
     # Search for each robot instance by its file path in the project file tree. Users the regex "/World/Origin.*/Robot" for it
     cartpole_cfg.prim_path = "/World/Origin.*/Robot"
 ```
-## 1.4: Attribute Config to each Instance
+### 1.4: Attribute Config to each Instance
 - So at run time, Isaac creates one folder and file for each instance, fetches each, and attributes to them control attributes defined in the downloaded config files.
 - Each robot instance already comes with a template USD file in the project tree. But this file only contains basic physical attributes (body, geometry, links, joints, mass etc), not control attributes (actuator type, control mode (PD, velocity, torque), joint grouping, drive parameters etc). These control attributes come from the downloaded config files. 
 ```python
     # To each found robot 
     cartpole = Articulation(cfg=cartpole_cfg)
 ```
-## 1.4: Return
+### 1.5: Return
 ```python 
     # return the scene information
     scene_entities = {"cartpole": cartpole}
