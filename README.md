@@ -505,7 +505,7 @@ def design_scene() -> tuple[dict, list[list[float]]]:
     cfg.func("/World/Light", cfg)
 ```
 ### 1.1: Create Instance Folders
-- At run time, Isaac creates one folder and file for each instance (and env)
+- At run time, Isaac creates one folder and file for each instance (and env) and stores each robot instance in these paths (in memory, not on disk)
   
 ```python
     # Create separate groups called "Origin1", "Origin2"
