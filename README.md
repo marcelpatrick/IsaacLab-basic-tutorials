@@ -494,10 +494,6 @@ from isaaclab_assets import CARTPOLE_CFG  # isort:skip
 
 ## 1. Design_scene()
 
-- The approach here uses ``CARTPOLE_cfg.copy()`` to fetche configs from external sources. It Loads a predefined ArticulationCfg describing the robot (links, joints, joint limits, DOFs, drive model, etc.) that already has the robot USD, actuators, joint properties, etc. These come from 2 places:
-  - USD files inside Nvidia Nuvcleus public cloud with structure and visuals for assets. Not stored locally because they are heavy.
-  - ``isaaclab_assets`` or ``CARTPOLE_cfg.copy()`` in this specific case (local config file downloaded as part of the isaaclab project). Stores simulation behavior + Isaac Lab metadata.
-
 ```python
 def design_scene() -> tuple[dict, list[list[float]]]:
     """Designs the scene."""
@@ -507,7 +503,11 @@ def design_scene() -> tuple[dict, list[list[float]]]:
     # Lights
     cfg = sim_utils.DomeLightCfg(intensity=3000.0, color=(0.75, 0.75, 0.75))
     cfg.func("/World/Light", cfg)
-
+```
+## 1.1: Create Instance Folders
+- At run time, Isaac creates one folder and file for each instance (and env)
+  
+```python
     # Create separate groups called "Origin1", "Origin2"
     # Each group will have a robot in it
     origins = [[0.0, 0.0, 0.0], [-1.0, 0.0, 0.0]]
@@ -515,16 +515,34 @@ def design_scene() -> tuple[dict, list[list[float]]]:
     prim_utils.create_prim("/World/Origin1", "Xform", translation=origins[0])
     # Origin 2
     prim_utils.create_prim("/World/Origin2", "Xform", translation=origins[1])
+```
 
+- ## 1.2: Download Configs
+  - The approach here uses ``CARTPOLE_cfg.copy()`` to fetch pre-defined configs from external sources. It loads a predefined ArticulationCfg describing the robot (links, joints, joint limits, DOFs, drive model, etc.) that already has the robot USD, actuators, joint properties, etc. These come from 2 places:
+    - USD files inside Nvidia Nucleus public cloud with structure and visuals for assets. Not stored locally because they are heavy.
+    - Local config file downloaded as part of the isaaclab project such as ``isaaclab_assets``, or ``CARTPOLE_cfg.copy()`` in this specific case. Stores simulation behavior + Isaac Lab metadata.
+    
+```python
     # Articulation
     # Fetches pre-populated configs from isaaclab_assets (local), which also calls the public Nvidia Nucleus server to fetch extra configs.
     cartpole_cfg = CARTPOLE_CFG.copy()
-    # “For each environment origin (Origin0, Origin1, ...), automatically attach/spawn this robot under a prim path matching this regex eg. /Origin0, /Origin1 etc”
-  # Override only the scenario-specific bits: here, just prim_path.
+```
+## 1.3: Search for Prim Instances
+  - Then it searches for each robot instance in the world by their file paths (created above by `` prim_utils.create_prim("/World/Origin1", "Xform", translation=origins[0])``), using the regex ``cartpole_cfg.prim_path = "/World/Origin.*/Robot"``
+    
+```python
+    # Search for each robot instance by its file path in the project file tree. Users the regex "/World/Origin.*/Robot" for it
     cartpole_cfg.prim_path = "/World/Origin.*/Robot"
-    # Creates an Articulation View, using that config.
+```
+## 1.4: Attribute Config to each Instance
+- So at run time, Isaac creates one folder and file for each instance, fetches each, and attributes to them control attributes defined in the downloaded config files.
+- Each robot instance already comes with a template USD file in the project tree. But this file only contains basic physical attributes (body, geometry, links, joints, mass etc), not control attributes (actuator type, control mode (PD, velocity, torque), joint grouping, drive parameters etc). These control attributes come from the downloaded config files. 
+```python
+    # To each found robot 
     cartpole = Articulation(cfg=cartpole_cfg)
-
+```
+## 1.4: Return
+```python 
     # return the scene information
     scene_entities = {"cartpole": cartpole}
     return scene_entities, origins
@@ -556,12 +574,9 @@ root_state[:, :3] += origins
 ### 2.3: Update State
 ```python
 robot.write_root_pose_to_sim(root_state[:, :7])
-```
-
-```python
 robot.write_root_velocity_to_sim(root_state[:, 7:])
 ```
-
+### 2.4: Loop the Simulation
 ```python
     # Simulation loop
     while simulation_app.is_running():
