@@ -519,7 +519,7 @@ def design_scene() -> tuple[dict, list[list[float]]]:
 
 ### 1.2: Copy Configs
   - The approach here uses ``CARTPOLE_cfg.copy()`` to copy pre-defined configs (CARTPOLE_CFG) from external sources. It loads a predefined ArticulationCfg describing the robot control behavior (links, joints, joint limits, DOFs, drive model, etc.) and points to the robot's class USD path (body). These come from 2 places:
-    - USD files live inside Nvidia Nucleus public cloud with structure and visuals for assets. Not stored locally because they are heavy.
+    - USD files live inside Nvidia Nucleus public cloud with structure and visuals for assets. Not stored locally because they are heavy. eg ``'https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/IsaacLab/Robots/Classic/Cartpole/cartpole.usd'``
     - Local config file downloaded as part of the isaaclab project such as ``isaaclab_assets``, or ``CARTPOLE_cfg.copy()`` in this specific case. Stores simulation behavior, robot's control behaviour and Isaac Lab metadata.
     
 ```python
@@ -538,7 +538,7 @@ def design_scene() -> tuple[dict, list[list[float]]]:
 - So at run time, Isaac:
   -  creates one folder and file for each instance,
   -  fetches each instance by its path,
-  -  Loads the USD file from the given path in the config file
+  -  Loads the robot body: the USD file from the given path in the config file
   -  Spawns robot instances into the stage under ``/World/OriginX/Robot``
   -  Applies to them actuator/control settings defined in the copied config files.
 - Each robot instance already comes with a template USD file in the project tree. But this file only contains basic physical attributes (body, geometry, links, joints, mass etc), not control attributes (actuator type, control mode (PD, velocity, torque), joint grouping, drive parameters etc). These control attributes come from the downloaded config files. 
